@@ -488,6 +488,7 @@
 
             var closeOnOrderConfirmation = true;
             var discountApplied = false;
+            var standalone = true;
 
             function calculateIngredientsCosts(ingredients)
             {
@@ -670,17 +671,30 @@
 
             function confirmOrder()
             {
-              if( _order.products.length > 0 )
-              {
-                _order.charge = document.getElementById("order-charge").value;
-                _order.tax = Math.floor(_taxRate * _order.charge);
-                _order.net = _order.charge - _order.tax;
-                _order.profit = _order.net - _order.cost;
-                              }
-              else
-              {
-                alert("No items in order, please add items or cancel")
-              }
+                if( _order.products.length > 0 )
+                {
+                    _order.charge = document.getElementById("order-charge").value;
+                    _order.tax = Math.floor(_taxRate * _order.charge);
+                    _order.net = _order.charge - _order.tax;
+                    _order.profit = _order.net - _order.cost;
+
+                    if( standalone )
+                    {
+                        try{
+
+                            window.localStorage.setItem( new Date().toISOString(), JSON.stringify(_order) );
+                        }
+                        catch( e )
+                        {
+                            console.log(e);
+                        }
+                        resetOrder();
+                    }
+                }
+                else
+                {
+                    alert("No items in order, please add items or cancel")
+                }
             }
             function addItemByName(productName)
             {
@@ -763,6 +777,27 @@
                 updateOrder();
             }
 
+            function exportOrders()
+            {
+                var exportText = document.getElementById("export-text");
+                if( exportText )
+                {
+                    var exportjson = "[";
+                    for (let i = 0; i < window.localStorage.length; ++i) 
+                    {
+                        exportjson += window.localStorage.getItem( window.localStorage.key(i) ) + ",";
+                    }
+                    exportjson += "]";
+                    exportText.value = exportjson;
+                }
+
+                var modal = document.getElementById("exportModal");
+                if( modal )
+                {
+                    modal.style.display = "block";
+                }
+            }
+
             function onLoad()
             {
                 addProductSelectionGrid(_products);
@@ -771,6 +806,18 @@
                 if( confirmButton )
                 {
                     confirmButton.addEventListener("click", confirmOrder);
+                }
+
+                var exportButton = document.getElementById("exportButton");
+                if( exportButton )
+                {
+                    exportButton.addEventListener("click", exportOrders);
+                }
+
+                var clearButton = document.getElementById("clearButton");
+                if( clearButton )
+                {
+                    clearButton.addEventListener("click", function(){ window.localStorage.clear(); });
                 }
 
                 var closeSetting = document.getElementById("closeSetting");
@@ -785,6 +832,23 @@
                   discountSetting.checked = discountApplied;
                   discountSetting.addEventListener("change", function(){ discountApplied = this.checked; updateOrder(); });
                 }
+
+                // Get the modal
+                var modal = document.getElementById("exportModal");
+                var span = document.getElementsByClassName("close")[0];
+
+                // When the user clicks on <span> (x), close the modal
+                span.onclick = function() {
+                    modal.style.display = "none";
+                }
+
+                // When the user clicks anywhere outside of the modal, close it
+                window.onclick = function(event) {
+                    if (event.target == modal) {
+                        modal.style.display = "none";
+                    }
+                } 
+
             }
         </script>
   </head>
@@ -814,8 +878,24 @@
                 <label for="order-charge" class="totals-label">Charge: </label>
                 <input type="number" class="totals-input" id="order-charge" min="0" />
                 <div>&nbsp;</div>
+                <!--<div><button id="confirmButton" class="confirm-button">Confirm</button></div>
+                <div><button id="exportButton" class="confirm-button">Export</button></div>
+                <div><button id="clearButton" class="confirm-button">Clear</button></div>-->
             </div>
         </div>
     </div>
+
+    <div id="exportModal" class="modal">
+
+        <!-- Modal content -->
+        <div class="modal-content">
+          <span class="close">&times;</span>
+          <div>
+            <input id="export-text" type="text">
+          </div>
+        </div>
+      
+      </div>
+
     </body>
 </html>
